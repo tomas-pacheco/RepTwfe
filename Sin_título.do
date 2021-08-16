@@ -30,7 +30,7 @@ gen post = (rel_year > 5)
 
 * Corremos el primer modelo
 
-reghdfe dep_var pre rel_year_m5 rel_year_m4 rel_year_m3 rel_year_m2 rel_year_m1 rel_year_0 rel_year_1 rel_year_2 rel_year_3 rel_year_4 rel_year_5 post, a(unit year) cl(state) 
+reghdfe dep_var pre rel_year_m5 rel_year_m4 rel_year_m3 rel_year_m2  rel_year_0 rel_year_1 rel_year_2 rel_year_3 rel_year_4 rel_year_5 post, a(unit year) cl(state) 
 
 *https://www.matthieugomez.com/statar/regressions.html
 
