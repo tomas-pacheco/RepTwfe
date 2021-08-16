@@ -70,3 +70,143 @@ data <- make_data()
 
 write.csv(data, "dataTWFE.csv")
   
+
+
+
+
+plot1 <- data %>% 
+  ggplot(aes(x = year, y = dep_var, group = unit)) + 
+  geom_line(alpha = 1/8, color = "grey") + 
+  geom_line(data = data %>% 
+              group_by(cohort_year, year) %>% 
+              summarize(dep_var = mean( )),
+            aes(x = year, y = dep_var, group = factor(cohort_year),
+                color = factor(cohort_year)),
+            size = 2) + 
+  labs(x = "", y = "Value", color = "Treatment group   ") + 
+  geom_vline(xintercept = 1986, color = '#E41A1C', size = 2) + 
+  geom_vline(xintercept = 1992, color = '#377EB8', size = 2) + 
+  geom_vline(xintercept = 1998, color = '#4DAF4A', size = 2) + 
+  geom_vline(xintercept = 2004, color = '#984EA3', size = 2) + 
+  scale_color_brewer(palette = 'Set1') + 
+  theme(legend.position = 'bottom',
+        #legend.title = element_blank(), 
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))  +
+  ggtitle("One draw of the DGP with homogeneous effects across cohorts \n and with all groups being eventually treated")+
+  theme(plot.title = element_text(hjust = 0.5, size=12))
+
+
+
+keepvars <- c("`rel_year_-5`",  "`rel_year_-4`",  "`rel_year_-3`",  "`rel_year_-2`",
+              "rel_year_0", "rel_year_1", "rel_year_2", "rel_year_3", "rel_year_4", "rel_year_5")
+
+run_ES_DiD <- function(...) {
+  
+  # resimulate the data
+  data <- make_data()
+  
+  # make dummy columns
+  data <- data %>% 
+    # make dummies
+    mutate(rel_year = year - cohort_year) %>% 
+    dummy_cols(select_columns = "rel_year") %>% 
+    # generate pre and post dummies
+    mutate(Pre = ifelse(rel_year < -5, 1, 0),
+           Post = ifelse(rel_year > 5, 1, 0))
+  
+  # estimate the model
+  mod <- lfe::felm(dep_var ~ Pre + `rel_year_-5` + `rel_year_-4` + `rel_year_-3` + `rel_year_-2` + 
+                     `rel_year_0` + `rel_year_1` + `rel_year_2` + `rel_year_3` + `rel_year_4` + 
+                     `rel_year_5` + Post | unit + year | 0 | state, data = data, exactDOF = TRUE)
+  
+  # grab the obs we need
+  mod2 <- tibble(
+    estimate = mod$coefficients,
+    term1 = rownames(mod$coefficients)
+  )
+  
+  es <-
+    mod2 %>% 
+    filter(term1 %in% keepvars) %>% 
+    mutate(t = c(-5:-2, 0:5)) %>% 
+    select(t, estimate)
+  es
+}
+
+data_classical <- map_dfr(1:nrep, run_ES_DiD)
+
+
+
+
+
+
+
+run_ES_DiD_sat <- function(...) {
+  
+  # resimulate the data
+  data <- make_data()
+  
+  # make dummy columns
+  data <- data %>% 
+    # make relative year indicator
+    mutate(rel_year = year - cohort_year)
+  
+  # get the minimum relative year - we need this to reindex
+  min_year <- min(data$rel_year)
+  
+  # reindex the relative years
+  data <- data %>% 
+    mutate(rel_year1 = rel_year - min_year) %>% 
+    dummy_cols(select_columns = "rel_year")
+  
+  # make regression formula 
+  indics <- paste("rel_year", (1:max(data$rel_year))[-(-1 - min_year)], sep = "_", collapse = " + ")
+  keepvars <- paste("rel_year", c(-5:-2, 0:5) - min_year, sep = "_")  
+  formula <- as.formula(paste("dep_var ~", indics, "| unit + year | 0 | state"))
+  
+  # run mod
+  mod <- felm(formula, data = data, exactDOF = TRUE)
+  
+  # grab the obs we need
+  mod2 <- tibble(
+    estimate = mod$coefficients,
+    term1 = rownames(mod$coefficients)
+  )
+  
+  es <-
+    mod2 %>% 
+    filter(term1 %in% keepvars) %>% 
+    mutate(t = c(-5:-2, 0:5)) %>% 
+    select(t, estimate)
+  es
+}
+
+data_sat <- map_dfr(1:nrep, run_ES_DiD_sat)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
