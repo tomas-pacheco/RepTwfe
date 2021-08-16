@@ -38,15 +38,12 @@ mat B = e(b)'
 
 mat results = J(1,1,.)
 
-mat C = B[2..5,1]
-mat D = B[7..12,1]
-mat temp = C \ D
+mat C = B[2..11,1]
 
-mat results = results \ temp
-mat results = results \ temp
-mat results = results \ temp
-mat results = results \ temp
-
+mat results = results \ C
+mat results = results \ C
+mat results = results \ C
+mat results = results \ C
 
 clear
 
@@ -85,8 +82,9 @@ insobs 1
 replace t = -1 in 11 	
 gen a = 0
 gen real_treatment = t + 1 if t >=-1 
+replace results1 = 0 if t == -1
 
-
+sort t
 #delimit;
 twoway (rarea upper_ic lower_ic t, color(gs14))
 (connected results1 t, lcolor(blue) mcolor(blue))
